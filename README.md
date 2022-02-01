@@ -15,6 +15,12 @@ Documentation for the hcaptcha captcha may be found at https://docs.hcaptcha.com
 * Dictionary for credentials
 * You need the ability to prove you are not a robot (or you are a robot that can solve captchas) ;-)
 
+## Demo
+This demo is a work in progress and does not represent the entirety of the remainder of this document. The demo only injects the necessary components to do a captcha. There is no validation... yet.
+
+https://hcaptcha.edgecompute.app/forms/post
+
+
 ## Setup
 Create a dictionary for the hcaptcha credentials. The dictionary will be write-only so that the credential may NOT be read from the UI or the API. Only the VCL or C@E program will be able to read from the dictionary.
 
