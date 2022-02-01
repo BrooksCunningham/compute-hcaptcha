@@ -33,13 +33,36 @@ type Aes256Cbc = Cbc<Aes256, Pkcs7>;
 // const BACKEND_HTTPBIN: &str = "httpbin";
 
 // HTTPBIN backend
-const BACKEND_HTTPBIN: &str = "httpbin.org";
+const BACKEND_HTTPBIN: &str = "httpbin";
 
 // BACKEND_HCAPTCHAAPI
 const BACKEND_HCAPTCHAAPI: &str = "hcaptchaapi";
 
 // https://docs.hcaptcha.com/
 const HCAPTCHA_VERIFY_URL: &str = "https://hcaptcha.com/siteverify";
+
+
+
+fn modify_content(body_str: String, tracking_tag: String, injection_location: &str) -> String {
+    let html = rewrite_str(
+        &body_str,
+        RewriteStrSettings {
+            element_content_handlers: vec![
+                // element!(".body-main-out", |el| {
+                //     el.set_attribute("style", "display: none")?;
+                //     Ok(())
+                // }),
+                element!(injection_location, |el| {
+                    el.append(&tracking_tag, ContentType::Html);
+                    Ok(())
+                }),
+            ],
+            ..RewriteStrSettings::default()
+        },
+    )
+    .unwrap();
+    html
+}
 
 /// The entry point for your application.
 ///
@@ -51,7 +74,7 @@ const HCAPTCHA_VERIFY_URL: &str = "https://hcaptcha.com/siteverify";
 #[fastly::main]
 fn main(mut req: Request) -> Result<Response, Error> {
     // Make any desired changes to the client request.
-    req.set_header(header::HOST, "github.webbots.page");
+    // req.set_header(header::HOST, "www.brookscunningham.com");
 
     // Pattern match on the path.
     match req.get_path() {
@@ -60,6 +83,31 @@ fn main(mut req: Request) -> Result<Response, Error> {
             return Ok(Response::from_status(StatusCode::OK)
                 .with_content_type(mime::TEXT_HTML_UTF_8)
                 .with_body(page_html));
+        }
+        // inject hcaptcha script into form page
+        path if path.starts_with("/forms/post") => {
+            let mut resp = req.send(BACKEND_HTTPBIN)?;
+
+            let credentials_dictionary: Dictionary = Dictionary::open("credentials");
+            let hcaptcha_public_site_key: String = credentials_dictionary.get("hcaptcha-public-site-key").unwrap().to_string();
+            println!("{}", hcaptcha_public_site_key);
+
+
+            let mut mod_resp_body = modify_content(
+                resp.take_body_str(),
+                r#"<script src="https://js.hcaptcha.com/1/api.js" async defer></script>"#.to_string(),
+                "head"
+            );
+
+            mod_resp_body = modify_content(
+                mod_resp_body,
+                format!(r#"<div class="h-captcha" data-sitekey="{}"></div>"#, &hcaptcha_public_site_key),
+                "form"
+            );
+
+            resp.set_body(mod_resp_body);
+
+            return Ok(resp);
         }
         path if path.starts_with("/hcaptcha-verify.html") => {
             // https://developer.fastly.com/solutions/examples/add-or-remove-cookies
@@ -151,7 +199,6 @@ fn get_hcaptcha_cookie_value_and_set_header(mut req: Request) -> Request {
     }
     return req;
 }
-
 
 fn encrypt_string(plaintext: &str) -> String {
     let credentials_dictionary: Dictionary = Dictionary::open("credentials");

@@ -14,3 +14,4 @@ rust-toolchain
 pkg/compute-example-hcaptcha.tar.gz
 fastly-local.toml
 fastly.toml
+*.gz
