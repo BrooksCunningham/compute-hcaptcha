@@ -12,6 +12,4 @@ bin/main.wasm
 pkg/hcaptcha-ecp.tar.gz
 rust-toolchain
 pkg/compute-example-hcaptcha.tar.gz
-fastly-local.toml
-fastly.toml
 *.gz
